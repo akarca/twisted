@@ -58,10 +58,10 @@ jobs:
           # On PYPY concurrent test jobs result in random failures so for now
           # run non-distributed tests.
           - python-version: pypy-3.6
-            tox-env: alldeps-withcov-posix
+            tox-env: alldeps-nocov-posix
             trial-args:
           - python-version: pypy-3.7
-            tox-env: alldeps-withcov-posix
+            tox-env: alldeps-nocov-posix
             trial-args:
 
 
