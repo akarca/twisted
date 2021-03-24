@@ -539,7 +539,7 @@ def _get_async_param(isAsync=None, **kwargs):
 def _pypy3BlockingHack():
     """
     Work around U{this pypy bug
-    <https://bitbucket.org/pypy/pypy/issues/3051/socketfromfd-sets-sockets-to-blocking-on>}
+    <https://foss.heptapod.net/pypy/pypy/-/issues/3051>}
     by replacing C{socket.fromfd} with a more conservative version.
     """
     try:

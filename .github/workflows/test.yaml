@@ -35,6 +35,7 @@ jobs:
         python-version: [3.6, 3.7, 3.8, 3.9, 3.10.0-alpha.5]
         noipv6: ['']
         deps_extras: ['all_non_platform,dev_release']
+        skip_coverage: [false]
         # As of 9 March 2021 GHA VM have 2 CPUs - Azure Standard_DS2_v2
         # Trial distributed jobs enabled to speed up the CI jobs.
         trial-args: ['-j 4']
@@ -61,10 +62,12 @@ jobs:
           - python-version: pypy-3.6
             trial-args: ''
             deps_extras: 'all_non_platform,dev_release'
+            skip_coverage: true
 
           - python-version: pypy-3.7
             trial-args: ''
             deps_extras: 'all_non_platform,dev_release'
+            skip_coverage: true
 
 
     steps:
@@ -105,7 +108,16 @@ jobs:
 
     - uses: twisted/python-info-action@v1
 
-    - name: Test
+    - name: Test without coverage
+      if: matrix.skip_coverage
+      run: |
+          python -m twisted.trial \
+          --reactor=$TWISTED_REACTOR \
+          --reporter=verbose $TRIAL_ARGS \
+          twisted
+
+    - name: Test with coverage
+      if: ${{ !matrix.skip_coverage }}
       run: |
         coverage erase
         coverage run -p --rcfile=.coveragerc \
@@ -116,14 +128,10 @@ jobs:
 
     - name: Publish coverage
       # We want to publish coverage even on failure.
-      if: success() || failure()
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}"
+      if: ${{ !matrix.skip_coverage && (success() || failure()) }}
       run: |
         coverage combine
         coverage xml -o coverage.xml -i
-        codecov $CODECOV_OPTIONS -X search -X gcov -f coverage.xml
-        coveralls
 
 
   pypi-publish:
