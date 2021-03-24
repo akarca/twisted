@@ -20,10 +20,11 @@ jobs:
   testing:
     runs-on: ubuntu-20.04
     env:
-      TOXENV: "${{ matrix.tox-env }}"
-      CODECOV_OPTIONS: "-n 'lnx-${{ matrix.python-version }}-${{ matrix.tox-env }}${{ matrix.noipv6 }}'"
+      TWISTED_REACTOR: default
+      CODECOV_OPTIONS: "-n 'lnx-${{ matrix.python-version }}-${{ matrix.deps_extras }}${{ matrix.noipv6 }}'"
       TRIAL_ARGS: "${{ matrix.trial-args }}"
-    name: ${{ matrix.python-version }}${{ matrix.noipv6 }}-${{ matrix.tox-env }}
+      DEPS_EXTRAS: "${{ matrix.deps_extras }}"
+    name: ${{ matrix.python-version }}${{ matrix.noipv6 }}-${{ matrix.deps_extras }}
     strategy:
       fail-fast: false
       matrix:
@@ -32,8 +33,8 @@ jobs:
         # `python_requires` from `setup.cfg`.
         # Run on latest minor release of each major python version.
         python-version: [3.6, 3.7, 3.8, 3.9, 3.10.0-alpha.5]
-        tox-env: ['alldeps-withcov-posix']
         noipv6: ['']
+        deps_extras: ['all_non_platform,dev_release']
         # As of 9 March 2021 GHA VM have 2 CPUs - Azure Standard_DS2_v2
         # Trial distributed jobs enabled to speed up the CI jobs.
         trial-args: ['-j 4']
@@ -47,22 +48,23 @@ jobs:
           # Distributed test run is disabled here so that we also have
           # end to end functional test usage for non-distributed trial runs.
           - python-version: 3.6.7
-            tox-env: nodeps-withcov-posix
-            trial-args: ''
+            deps_extras: 'test'
           # `noipv6` is created to make sure all is OK on an OS which doesn't
           # have IPv6 available.
           # Any supported Python version is OK for this job.
           - python-version: 3.6
-            tox-env: alldeps-withcov-posix
+            deps_extras: 'all_non_platform,dev_release'
             noipv6: -noipv6
+
           # On PYPY concurrent test jobs result in random failures so for now
           # run non-distributed tests.
           - python-version: pypy-3.6
-            tox-env: alldeps-nocov-posix
-            trial-args:
+            trial-args: ''
+            deps_extras: 'all_non_platform,dev_release'
+
           - python-version: pypy-3.7
-            tox-env: alldeps-nocov-posix
-            trial-args:
+            trial-args: ''
+            deps_extras: 'all_non_platform,dev_release'
 
 
     steps:
@@ -96,21 +98,32 @@ jobs:
         sudo sysctl -w net.ipv6.conf.lo.disable_ipv6=1
         ip a
 
-    - uses: twisted/python-info-action@v1
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip tox
-        tox --notest
+        python -m pip install --upgrade pip codecov~=2.1 coveralls
+        python -m pip install .[$DEPS_EXTRAS]
+
+    - uses: twisted/python-info-action@v1
 
     - name: Test
       run: |
-        python --version
-        tox -q
+        coverage erase
+        coverage run -p --rcfile=.coveragerc \
+          -m twisted.trial \
+          --reactor=$TWISTED_REACTOR \
+          --reporter=verbose $TRIAL_ARGS \
+          twisted
 
     - name: Publish coverage
       # We want to publish coverage even on failure.
-      if: contains(matrix['tox-env'], 'withcov') || failure()
-      run: tox -e coverage-prepare,codecov-push,coveralls-push
+      if: success() || failure()
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}"
+      run: |
+        coverage combine
+        coverage xml -o coverage.xml -i
+        codecov $CODECOV_OPTIONS -X search -X gcov -f coverage.xml
+        coveralls
 
 
   pypi-publish:
