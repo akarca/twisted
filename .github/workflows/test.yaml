@@ -123,13 +123,18 @@ jobs:
           --reporter=verbose $TRIAL_ARGS \
           twisted
 
-    - name: Publish coverage
+    - name: Prepare coverage
       # We want to publish coverage even on failure.
       if: ${{ !matrix.skip_coverage && (success() || failure()) }}
       run: |
         coverage combine
         coverage xml -o coverage.xml -i
 
+    - name: Publish coverage
+      # We want to publish coverage even on failure.
+      if: ${{ !matrix.skip_coverage && (success() || failure()) }}
+      run: |
+        codecov $CODECOV_OPTIONS -f coverage.xml
 
   pypi-publish:
     # https://github.community/t/is-it-possible-to-require-all-github-actions-tasks-to-pass-without-enumerating-them/117957/4?u=graingert
