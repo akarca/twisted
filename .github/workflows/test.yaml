@@ -22,7 +22,9 @@ jobs:
     env:
       TWISTED_REACTOR: default
       CODECOV_OPTIONS: "-n 'lnx-${{ matrix.python-version }}-${{ matrix.deps_extras }}${{ matrix.noipv6 }}'"
-      TRIAL_ARGS: "${{ matrix.trial-args }}"
+      # As of 9 March 2021 GHA VM have 2 CPUs - Azure Standard_DS2_v2
+      # Trial distributed jobs enabled to speed up the CI jobs.
+      TRIAL_ARGS: "-j 4"
       DEPS_EXTRAS: "${{ matrix.deps_extras }}"
     name: ${{ matrix.python-version }}${{ matrix.noipv6 }}-${{ matrix.deps_extras }}
     strategy:
@@ -36,9 +38,6 @@ jobs:
         noipv6: ['']
         deps_extras: ['all_non_platform,dev_release']
         skip_coverage: [false]
-        # As of 9 March 2021 GHA VM have 2 CPUs - Azure Standard_DS2_v2
-        # Trial distributed jobs enabled to speed up the CI jobs.
-        trial-args: ['-j 4']
 
         include:
 
@@ -57,15 +56,13 @@ jobs:
             deps_extras: 'all_non_platform,dev_release'
             noipv6: -noipv6
 
-          # On PYPY concurrent test jobs result in random failures so for now
-          # run non-distributed tests.
+          # On PYPY there is no coverage extension, so coverage tests are
+          # super slow.
           - python-version: pypy-3.6
-            trial-args: ''
             deps_extras: 'all_non_platform,dev_release'
             skip_coverage: true
 
           - python-version: pypy-3.7
-            trial-args: ''
             deps_extras: 'all_non_platform,dev_release'
             skip_coverage: true
 
