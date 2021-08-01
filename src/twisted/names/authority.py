@@ -166,6 +166,19 @@ class FileAuthority(common.ResolverBase):
 
         domain_records = self.records.get(name.lower())
 
+        address_types = [dns.CNAME, dns.A]
+        address_types_all = address_types + [dns.ALL_RECORDS]
+        has_address = filter(lambda x: x.TYPE in address_types, domain_records) if domain_records else []
+
+        if not has_address and type in address_types_all:
+            wildcard_domain = "*.%s" % ".".join(name.decode("utf-8").lower().split(".")[1:])
+            wildcard = self.records.get(wildcard_domain.encode("utf-8"))
+            if wildcard:
+                if domain_records:
+                    domain_records += wildcard
+                else:
+                    domain_records = wildcard
+
         if domain_records:
             for record in domain_records:
                 if record.ttl is not None:
