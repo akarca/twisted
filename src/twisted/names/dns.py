@@ -2138,7 +2138,10 @@ class Record_TXT(tputil.FancyEqMixin, tputil.FancyStrMixin):
 
     def encode(self, strio, compDict=None):
         for d in self.data:
-            strio.write(struct.pack("!B", len(d)) + d)
+            if type(d) == str:
+                strio.write(struct.pack("!B", len(d)) + d.encode("utf-8"))
+            else:
+                strio.write(struct.pack("!B", len(d)) + d)
 
     def decode(self, strio, length=None):
         soFar = 0
